@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-
+import asyncio
 # -*- coding: utf-8 -*-
 import os
 import discord
@@ -12,6 +12,7 @@ import urllib.parse
 import time
 import requests
 import creds
+from telegramBot import TelegramBot, VerifierCallback
 
 try:
    import cPickle as pickle
@@ -179,6 +180,12 @@ async def on_message(message):
         # Phase #3 - Get the CAPTCHA response
         await message.channel.send("Waiting for CAPTHA response...")
 
+def start_telegram_bot():
+    EyalVC = VerifierCallback("972542864041", lambda verified: print("Verified"))
+    TelegramBot.initialize()
+    TelegramBot.register_cb(EyalVC)
+    asyncio.run(TelegramBot.start())
+
 def main():
     global cache
     # Reload the cache
@@ -191,6 +198,8 @@ def main():
     t = threading.Thread(target = cache_flush)
     t.start()
     client.run(creds.TOKEN)
+    # Must be async
+    start_telegram_bot()
 
 if __name__ == "__main__":
     main()
