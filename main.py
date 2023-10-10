@@ -179,9 +179,7 @@ async def on_message(message):
         await message.channel.send("Please verify your phone number via Telegram...")
 
 def start_telegram_bot():
-    # EyalVC = VerifierCallback("972542864041", lambda verified: print("Verified"))
     TelegramBot.initialize()
-    #TelegramBot.register_cb(EyalVC)
     asyncio.run(TelegramBot.start())
 
 
