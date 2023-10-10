@@ -177,9 +177,7 @@ async def on_message(message):
         await message.channel.send("Waiting for CAPTHA response...")
 
 def start_telegram_bot():
-    EyalVC = VerifierCallback("972542864041", lambda verified: print("Verified"))
     TelegramBot.initialize()
-    TelegramBot.register_cb(EyalVC)
     asyncio.run(TelegramBot.start())
 
 
