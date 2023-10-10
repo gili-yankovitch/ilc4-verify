@@ -76,7 +76,7 @@ async def on_raw_reaction_add(payload):
 
     user = client.get_user(int(payload.user_id))
     channel = await client.create_dm(user)
-
+ 
     if payload.user_id not in cache:
         print("Invalid response from user", payload.user_id)
         await channel.send("Invalid response. Please state your details to begin verification")
