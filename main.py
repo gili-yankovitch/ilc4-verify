@@ -76,7 +76,7 @@ async def verify_linkedin(payload):
         num_connections = "Verify manually"
 
     final = await ADMIN_CHANNEL.send("Request for approval:\n" + \
-                     "\tUsername: {NAME} Id: {ID}\n".format(NAME = client.get_user(payload.user_id).name, ID = 218702832075931648) + \
+                     "\tUsername: {NAME} Id: {ID} Link: <@{LINK_ID}>\n".format(NAME = client.get_user(payload.user_id).name, ID = payload.user_id, LINK_ID = payload.user_id) + \
                      "\tName: {NAME}\n".format(NAME=cache[payload.user_id]["name"]) + \
                      "\tPhone number: {PHONE}\n".format(PHONE=cache[payload.user_id]["phone"]) +    \
                      "\tLinkedIn profile: {URL}\n".format(URL=cache[payload.user_id]["linkedin"]) + \
