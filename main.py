@@ -26,6 +26,7 @@ intents = discord.Intents.default()
 intents.reactions = True
 intents.members = True
 intents.guilds = True
+intents.message_content = True
 client = discord.Client(intents=intents)
 
 CHECK_ORD_VALUE = 9989
@@ -55,15 +56,38 @@ def normalize(s):
     return urllib.parse.unquote(s.replace("\\n", "").replace("\\x", "%")).replace("\\\\\"", "\\\"").replace("\\", "")
 
 
+async def verify_linkedin(payload):
+    try:
+        resp = requests.post("http://127.0.0.1:5000/person", headers={"Content-Type": "application/json"},
+                             data=json.dumps({"linkedin": cache[payload.user_id]["linkedin"]}))
+        data = resp.json()
+
+        cache[payload.user_id]["name"] = data["name"]
+        num_exp = len(data["experiences"])
+        num_connections = data["connections"]
+
+        if num_connections == 0:
+            num_connections = "Verify manually"
+
+        if num_exp == 0:
+            num_exp = "Verify manually"
+    except:
+        num_exp = "Verify manually"
+        num_connections = "Verify manually"
+
+    final = await ADMIN_CHANNEL.send("Request for approval:\n" + \
+                     "\tUsername: {NAME} Id: {ID}\n".format(NAME = client.get_user(payload.user_id).name, ID = 218702832075931648) + \
+                     "\tName: {NAME}\n".format(NAME=cache[payload.user_id]["name"]) + \
+                     "\tPhone number: {PHONE}\n".format(PHONE=cache[payload.user_id]["phone"]) +    \
+                     "\tLinkedIn profile: {URL}\n".format(URL=cache[payload.user_id]["linkedin"]) + \
+                     "\t\tLinkedIn experiences: {NUM}\n".format(NUM = num_exp) + \
+                     "\t\tConnections: {NUM}".format(NUM = num_connections)) # ### Number of linkedin connections
+    await final.add_reaction("\U0001F440")
+
 @client.event
 async def on_ready():
     global ADMIN_CHANNEL
     ADMIN_CHANNEL = client.get_channel(ADMIN_CHANNEL_ID)
-    some_chan = client.get_channel(1160618250703474781)
-    try:
-        await some_chan.send("Bot test message")
-    except Exception as e:
-        print(e)
     print(f"{client.user} has connected")
 
 @client.event
@@ -91,17 +115,23 @@ async def on_raw_reaction_add(payload):
         # Add CB and register phone number
         phone_number = TelegramBot.normalize_phone_number(cache[payload.user_id]["phone"])
 
-        async def onVerified(verified, name):
+        async def onVerified(verified, name, phone_number):
             if verified:
                 # Add to cache
                 cache[payload.user_id]["name"] = name
 
-                final = await ADMIN_CHANNEL.send("Request for approval:\n" + \
-                                 "\tUsername: {NAME} Id: {ID}\n".format(NAME = client.get_user(payload.user_id).name, ID = 218702832075931648) + \
-                                 "\tName: {NAME}\n".format(NAME=cache[payload.user_id]["name"]) + \
-                                 "\tPhone number: {PHONE}\n".format(PHONE=cache[payload.user_id]["phone"]) +    \
-                                 "\tLinkedIn profile: {URL}\n".format(URL=cache[payload.user_id]["linkedin"]))
-                await final.add_reaction("\U0001F440")
+                # ### Phone is now from Telegram verification
+                cache[payload.user_id]["phone"] = phone_number
+
+                try:
+                    await verify_linkedin(payload)
+                except:
+                    final = await ADMIN_CHANNEL.send("Request for approval:\n" + \
+                                     "\tUsername: {NAME} Id: {ID}\n".format(NAME = client.get_user(payload.user_id).name, ID = 218702832075931648) + \
+                                     "\tName: {NAME}\n".format(NAME=cache[payload.user_id]["name"]) + \
+                                     "\tPhone number: {PHONE}\n".format(PHONE=cache[payload.user_id]["phone"]) +    \
+                                     "\tLinkedIn profile: {URL}\n".format(URL=cache[payload.user_id]["linkedin"]))
+                    await final.add_reaction("\U0001F440")
 
                 #threading.Thread(target = verify_linkedin, args = (payload.user_id,)).start()
                 #await verify_linkedin(payload.user_id)
@@ -121,9 +151,9 @@ async def on_raw_reaction_add(payload):
             msg = await ADMIN_CHANNEL.fetch_message(int(payload.message_id))
             print("Approved message:", msg)
 
-phone = regex.compile("(?:972|0?)5[0-9\-]+")
+#phone = regex.compile("(?:972|0?)5[0-9\-]+")
+phone = regex.compile("\\+?[0-9\-]{8,15}")
 url = regex.compile(r'\b(?:https?):[\w/#~:.?+=&%@!\-.:?\\-]+?(?=[.:?\-]*(?:[^\w/#~:.?+=&%@!\-.:?\-]|$))')
-
 def extract_details(data):
     pn = phone.findall(data)
 
@@ -135,10 +165,11 @@ def extract_details(data):
     if len(linkedin) == 0:
         return []
 
-    if not pn[0].startswith("05"):
-        pn = "0" + pn[0]
-    else:
-        pn = pn[0]
+    #if not pn[0].startswith("05"):
+    #    pn = "0" + pn[0]
+    #else:
+    #    pn = pn[0]
+    pn = pn[0]
 
     return [{"phone": pn, "linkedin": linkedin[0], "msg": data}]
 

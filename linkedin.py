@@ -1,12 +1,41 @@
 #!/usr/bin/python3
 
 from flask import Flask, request
+from bs4 import BeautifulSoup
+import regex as re
+import requests
+import time
+
 from linkedin_scraper import Person, actions
 from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.firefox.options import Options
+
 import json
 import creds
 
 app = Flask(__name__)
+
+user = re.compile("linkedin.com/in/(?P<username>[^\?/]+)")
+def linkedin_profile(url):
+    m = user.search(url)
+
+    if m is None:
+        return None
+
+    resp = requests.get("https://api.scrapingdog.com/linkedin/?api_key={TOKEN}&type=profile&linkId={USER}".format(TOKEN = creds.SCRAPINGDOG_API_KEY,USER = m.group("username")))
+
+    data = resp.json()
+
+    if len(data) == 0:
+        return {}
+
+    print(data)
+
+    data = data[0]
+
+    return { "name": data["fullName"], "experiences": data["experience"], "connections": data["connections"] }
 
 @app.route('/person', methods = ["POST"])
 def person():
@@ -18,22 +47,10 @@ def person():
 
         print("LinkedIn profile:", data["linkedin"])
 
-        print("Logging in to LinkedIn...")
-        driver = init_selenium()
-        actions.login(driver, creds.LINKEDIN_USER, creds.LINKEDIN_PW)
         print("Requesting user page...")
-        person = Person(data["linkedin"], driver = driver)
-        print("Done")
-    return { "name": person.name, "experiences": [ { "name": e.institution_name, "duration": e.duration } for e in person.experiences ] }
+        return linkedin_profile(data["linkedin"])
 
-def init_selenium():
-    op = webdriver.ChromeOptions()
-    op.add_argument('headless')
-    #op.add_argument('window-size=1024,768')
-    #op.add_argument('--no-sandbox')
-    return webdriver.Chrome(options=op)
+    return {}
 
 if __name__ == '__main__':
-    print("Initializing selenium...")
-    print ("Logged in.")
     app.run()
