@@ -59,7 +59,7 @@ class TelegramBot:
         contact = update.message.contact
         contact_user_id = contact.user_id
         update_user_id = update.message.from_user.id
-        phone_number = contact.phone_number
+        phone_number = cls.normalize_phone_number(contact.phone_number)
         print(f"Received phone number: {phone_number}")
         try:
             vc: VerifierCallback = cls.verified_cbs[phone_number]
@@ -71,12 +71,19 @@ class TelegramBot:
         # We must validate that the contacts' user_id is the same as the senders to make sure that he is the contact
         if contact_user_id != update_user_id:
             await update.message.reply_text(f"Could not verify number: user_id mismatch")
-            vc.callback(False)
+            await vc.callback(False)
+            del cls.verified_cbs[phone_number]
             return
 
         await update.message.reply_text(f"Verified! You can return to discord")
-        vc.callback(True)
+        await vc.callback(True)
+        del cls.verified_cbs[phone_number]
 
     @classmethod
     def register_cb(cls, vc: VerifierCallback):
         cls.verified_cbs[vc.phone_number] = vc
+
+    @classmethod
+    def normalize_phone_number(cls, phone_number):
+        # Return only last 9 digits
+        return phone_number[-9:]

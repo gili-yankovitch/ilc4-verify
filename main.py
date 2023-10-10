@@ -35,6 +35,7 @@ pattern = regex.compile(r'\{(?:[^{}]|(?R))*\}')
 CACHE_FILE = "cache.pkl"
 cache = {}
 
+TELEGRAM_LINK = "https://t.me/ILC4Bot"
 
 def cache_flush():
     global cache
@@ -92,16 +93,25 @@ async def on_raw_reaction_add(payload):
 
     if ord(payload.emoji.name) == CHECK_ORD_VALUE:
         await channel.send(
-            "Sending you a Telegram message with CAPTCHA to: {PHONE_NUMBER}. Please reply to me with the response.".format(
-                PHONE_NUMBER=cache[payload.user_id]["phone"]))
+            f"Please open this link on telegram, and send your contact details: {TELEGRAM_LINK}")
+        # Add CB and register phone number
+        phone_number = TelegramBot.normalize_phone_number(cache[payload.user_id]["phone"])
 
-        print("Probing LinkedIn for more details...")
-        # threading.Thread(target = verify_linkedin, args = (payload.user_id,)).start()
-        await verify_linkedin(payload.user_id)
+        async def onVerified(verified):
+            if verified:
+                print("Probing LinkedIn for more details...")
+                # threading.Thread(target = verify_linkedin, args = (payload.user_id,)).start()
+                # await verify_linkedin(payload.user_id)
+                await channel.send("Verified!")
+            else:
+                raise "unable to verify"
+
+        TelegramBot.register_cb(VerifierCallback(phone_number, onVerified))
+        print(f"Registered callback for {phone_number}")
+
     else:
         del cache[payload.user_id]
         await channel.send("I am sorry. I've probably misunderstood. Please resend personal information data.")
-
 
 async def run_llama(data):
     # Look inside the message for:
@@ -195,7 +205,6 @@ async def on_message(message):
     else:
         # Phase #3 - Get the CAPTCHA response
         await message.channel.send("Waiting for CAPTHA response...")
-
 
 def start_telegram_bot():
     EyalVC = VerifierCallback("972542864041", lambda verified: print("Verified"))
