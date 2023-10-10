@@ -113,36 +113,6 @@ async def on_raw_reaction_add(payload):
         del cache[payload.user_id]
         await channel.send("I am sorry. I've probably misunderstood. Please resend personal information data.")
 
-async def run_llama(data):
-    # Look inside the message for:
-    # 1. LinkedIn link
-    # 2. Phone number
-    # 3. Name
-    # Take the message, send to the model to extract details
-    cmd = shlex.split(
-        f"./llamacpp -m models/vicuna-7b-1.1.ggmlv3.q4_0.bin -p \"Respond with a JSON only. The data below contains a full name, a LinkedIn URL and a phone number. " +
-        "Parse the data below and return a JSON with the following keys: 'name', 'linkedin', 'phone':\n" +
-        data + "\n" +
-        "JSON:\"")
-
-    print("Running:", cmd)
-    p = subprocess.Popen(cmd,
-                         stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE)
-
-    try:
-        out, err = p.communicate()
-
-        print("Output:", str(out))
-
-        m = pattern.findall(str(out))
-    except Exception as e:
-        print(e)
-        m = []
-
-    return m
-
-
 phone = regex.compile("(?:972|0?)5[0-9\-]+")
 url = regex.compile(r'\b(?:https?):[\w/#~:.?+=&%@!\-.:?\\-]+?(?=[.:?\-]*(?:[^\w/#~:.?+=&%@!\-.:?\-]|$))')
 
